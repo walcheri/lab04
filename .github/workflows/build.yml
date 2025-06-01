@@ -1,0 +1,16 @@
+name: GitHub Actions 
+on: [push]
+jobs:
+  run_on_Linux:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+          
+        - run: |
+               cmake -H. -B_build
+               cmake --build _build
+               
+        - name: Configure and Build Project
+          uses: actions/upload-artifact@v4
+          
