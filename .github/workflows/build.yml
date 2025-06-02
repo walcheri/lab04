@@ -1,16 +1,50 @@
-name: GitHub Actions 
-on: [push]
+name: CI Build and Test Pipeline
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  BUILD_TYPE: Release
+
 jobs:
-  run_on_Linux:
-      runs-on: ubuntu-latest
-      steps:
-        - name: Checkout
-          uses: actions/checkout@v4
+  linux_build:
+    name: Linux (${{ matrix.compiler }})
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        compiler: [gcc-11, clang-14]
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Configure CMake
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+          -DCMAKE_C_COMPILER=${{ matrix.compiler }} \
+          -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}++
           
-        - run: |
-               cmake -H. -B_build
-               cmake --build _build
-               
-        - name: Configure and Build Project
-          uses: threeal/cmake-action@v1.3.0
-          
+      - name: Build
+        run: cmake --build build --config $BUILD_TYPE
+        
+      - name: Run Tests
+        run: ctest --test-dir build --output-on-failure
+
+  windows_build:
+    name: Windows MSVC
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        
+      - name: Generate Project
+        run: cmake -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+        
+      - name: Compile
+        run: cmake --build build --config $BUILD_TYPE
+        
+      - name: Test
+        run: ctest --test-dir build -C $BUILD_TYPE --output-on-failure
